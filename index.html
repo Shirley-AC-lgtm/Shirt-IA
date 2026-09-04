@@ -1,0 +1,194 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Shirt AI</title>
+
+    <link rel="stylesheet" href="frontend/style.css">
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="sidebar-header">
+                <h1>Shirt AI</h1>
+            </div>
+
+            <button class="new-chat">
+                + New chat
+            </button>
+
+            <div class="chat-history">
+
+                <p class="history-title">Chats</p>
+
+                <button class="chat-item">
+                    New conversation
+                </button>
+
+                <button class="chat-item">
+                    Project ideas
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN CHAT -->
+        <main class="chat-area">
+
+            <section class="avatar-section" id="avatarSection">
+                <canvas id="avatarCanvas"></canvas>
+
+                <div class="avatar-overlay">
+                    <span class="avatar-status">SHIRT AI</span>
+                    <span class="avatar-state">ONLINE</span>
+                </div>
+            </section>
+
+            <!-- HEADER -->
+            <header class="chat-header">
+
+                <div class="ai-info">
+
+                    <div class="ai-avatar">
+                        SA
+                    </div>
+
+                    <div>
+                        <h2>Shirt AI</h2>
+                        <span class="online">
+                            ● Online
+                        </span>
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- MESSAGES -->
+            <section class="messages" id="messages">
+
+                <!-- AI MESSAGE -->
+                <div class="message ai-message">
+
+                    <div class="message-avatar">
+                        SA
+                    </div>
+
+                    <div class="message-content">
+
+                        <span class="message-name">
+                            Shirt AI
+                        </span>
+
+                        <p>
+                            Hello! I'm Shirt AI. How can I help you today?
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- USER MESSAGE -->
+                <div class="message user-message">
+
+                    <div class="message-content">
+
+                        <span class="message-name">
+                            You
+                        </span>
+
+                        <p>
+                            Hello Shirt AI! 👋
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <!-- TYPING INDICATOR -->
+                <div class="message ai-message typing-message" id="typingIndicator">
+
+                    <div class="message-avatar">
+                        SA
+                    </div>
+
+                    <div class="typing">
+
+                        <span></span>
+                        <span></span>
+                        <span></span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- INPUT -->
+            <section class="input-area">
+
+                <div class="input-box">
+
+                    <button class="voice-button"
+                            id="voiceButton"
+                            title="Voice conversation">
+                        🎤
+                    </button>
+
+                    <textarea id="messageInput"
+                              placeholder="Message Shirt AI..."
+                              rows="1">
+                    </textarea>
+
+                    <button class="send-button"
+                            id="sendButton"
+                            title="Send message">
+                        ➤
+                    </button>
+
+                </div>
+
+                <p class="disclaimer">
+                    Shirt AI can make mistakes. Check important information.
+                </p>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module" src="frontend/avatar.js"></script>
+
+    <script src="frontend/script.js"></script>
+
+</body>
+
+</html>
+
