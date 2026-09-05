@@ -1,41 +1,27 @@
-// ============================================================
-// SHIRT AI
-// DIGITAL HUMAN AVATAR
-// Three.js
-// ============================================================
-
 import * as THREE from "three";
 
 const canvas = document.getElementById("avatarCanvas");
 
 if (!canvas) {
-    console.error("Shirt AI: avatarCanvas no encontrado.");
+    console.error("Shirt AI: no se encontró #avatarCanvas");
 } else {
 
     const container = canvas.parentElement;
 
-    // --------------------------------------------------------
-    // SCENE
-    // --------------------------------------------------------
+    // --------------------------------------------------
+    // ESCENA
+    // --------------------------------------------------
 
     const scene = new THREE.Scene();
 
     const camera = new THREE.PerspectiveCamera(
-        28,
+        32,
         1,
         0.1,
         100
     );
 
-    camera.position.set(
-        0,
-        0.25,
-        5.5
-    );
-
-    // --------------------------------------------------------
-    // RENDERER
-    // --------------------------------------------------------
+    camera.position.set(0, 0, 5);
 
     const renderer = new THREE.WebGLRenderer({
         canvas,
@@ -47,474 +33,462 @@ if (!canvas) {
         Math.min(window.devicePixelRatio || 1, 2)
     );
 
-    renderer.setClearColor(
-        0x000000,
-        0
-    );
+    renderer.setClearColor(0x000000, 0);
 
-    // --------------------------------------------------------
-    // DIGITAL HUMAN GROUP
-    // --------------------------------------------------------
+    // --------------------------------------------------
+    // GRUPO PRINCIPAL
+    // --------------------------------------------------
 
     const avatar = new THREE.Group();
 
     scene.add(avatar);
 
-    // --------------------------------------------------------
-    // LIGHTING
-    // --------------------------------------------------------
+    // --------------------------------------------------
+    // FOTO
+    // --------------------------------------------------
 
-    const keyLight = new THREE.DirectionalLight(
-        0xdffaff,
-        3
+    const textureLoader = new THREE.TextureLoader();
+
+    const texture = textureLoader.load(
+        "models/avatar.jpeg",
+        () => {
+            console.log("Shirt AI: retrato cargado.");
+        },
+        undefined,
+        (error) => {
+            console.error(
+                "Shirt AI: no se pudo cargar models/avatar.jpeg",
+                error
+            );
+        }
     );
 
-    keyLight.position.set(
-        -2,
-        3,
-        4
-    );
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
 
-    scene.add(keyLight);
+    // --------------------------------------------------
+    // SHADER DEL HUMANO DIGITAL
+    // --------------------------------------------------
 
-
-    const rimLight = new THREE.DirectionalLight(
-        0x42dfff,
-        2
-    );
-
-    rimLight.position.set(
-        3,
-        1,
-        -2
-    );
-
-    scene.add(rimLight);
-
-
-    const frontLight = new THREE.PointLight(
-        0xffffff,
-        2,
-        8
-    );
-
-    frontLight.position.set(
-        0,
-        1,
-        3
-    );
-
-    scene.add(frontLight);
-
-
-    // ========================================================
-    // DIGITAL BODY
-    // ========================================================
-
-    const bodyMaterial = new THREE.MeshPhysicalMaterial({
-
-        color: 0x172b36,
-
-        roughness: 0.48,
-
-        metalness: 0.18,
+    const material = new THREE.ShaderMaterial({
 
         transparent: true,
 
-        opacity: 0.96,
+        uniforms: {
 
-        clearcoat: 0.45,
+            uTexture: {
+                value: texture
+            },
 
-        clearcoatRoughness: 0.2
+            uTime: {
+                value: 0
+            },
 
+            uMouse: {
+                value: new THREE.Vector2(0, 0)
+            },
+
+            uResolution: {
+                value: new THREE.Vector2(1, 1)
+            }
+
+        },
+
+        vertexShader: `
+
+            varying vec2 vUv;
+
+            uniform float uTime;
+            uniform vec2 uMouse;
+
+            void main() {
+
+                vUv = uv;
+
+                vec3 pos = position;
+
+                // Micro movimiento tipo videollamada
+                float breathing =
+                    sin(uTime * 1.15) * 0.006;
+
+                pos.y += breathing;
+
+                // Parallax extremadamente pequeño
+                pos.x += uMouse.x * 0.025;
+                pos.y += uMouse.y * 0.018;
+
+                // Pequeña vibración digital
+                float wave =
+                    sin(uv.y * 25.0 + uTime * 1.5)
+                    * 0.0015;
+
+                pos.x += wave;
+
+                gl_Position =
+                    projectionMatrix *
+                    modelViewMatrix *
+                    vec4(pos, 1.0);
+            }
+
+        `,
+
+        fragmentShader: `
+
+            uniform sampler2D uTexture;
+            uniform float uTime;
+
+            varying vec2 vUv;
+
+            // ------------------------------------------------
+            // NOISE
+            // ------------------------------------------------
+
+            float hash(vec2 p) {
+
+                return fract(
+                    sin(
+                        dot(
+                            p,
+                            vec2(
+                                127.1,
+                                311.7
+                            )
+                        )
+                    ) * 43758.5453123
+                );
+            }
+
+            // ------------------------------------------------
+            // DIGITAL SCAN
+            // ------------------------------------------------
+
+            float scanline(vec2 uv) {
+
+                float line =
+                    sin(
+                        uv.y * 900.0
+                        - uTime * 4.0
+                    );
+
+                return line * 0.018;
+            }
+
+            // ------------------------------------------------
+            // EDGE DETECTION APROXIMADA
+            // ------------------------------------------------
+
+            float edgeGlow(vec2 uv) {
+
+                float left =
+                    texture2D(
+                        uTexture,
+                        uv + vec2(-0.004, 0.0)
+                    ).r;
+
+                float right =
+                    texture2D(
+                        uTexture,
+                        uv + vec2(0.004, 0.0)
+                    ).r;
+
+                float top =
+                    texture2D(
+                        uTexture,
+                        uv + vec2(0.0, 0.004)
+                    ).r;
+
+                float bottom =
+                    texture2D(
+                        uTexture,
+                        uv + vec2(0.0, -0.004)
+                    ).r;
+
+                float difference =
+                    abs(left - right)
+                    +
+                    abs(top - bottom);
+
+                return smoothstep(
+                    0.03,
+                    0.25,
+                    difference
+                );
+            }
+
+            void main() {
+
+                vec2 uv = vUv;
+
+                // --------------------------------------------
+                // MICRO DISTORSIÓN
+                // --------------------------------------------
+
+                float distortion =
+                    sin(
+                        uv.y * 70.0
+                        + uTime * 1.2
+                    ) * 0.0007;
+
+                uv.x += distortion;
+
+                vec4 photo =
+                    texture2D(
+                        uTexture,
+                        uv
+                    );
+
+                // --------------------------------------------
+                // MÁSCARA SUAVE
+                // --------------------------------------------
+
+                vec2 centered =
+                    uv - 0.5;
+
+                float ellipse =
+                    dot(
+                        centered * vec2(0.88, 1.0),
+                        centered * vec2(0.88, 1.0)
+                    );
+
+                float mask =
+                    1.0 -
+                    smoothstep(
+                        0.18,
+                        0.255,
+                        ellipse
+                    );
+
+                // --------------------------------------------
+                // CONSERVAR LA FOTO REAL
+                // --------------------------------------------
+
+                vec3 color =
+                    photo.rgb;
+
+                // --------------------------------------------
+                // TONO DIGITAL MUY SUTIL
+                // --------------------------------------------
+
+                color.r *= 0.97;
+                color.g *= 1.01;
+                color.b *= 1.025;
+
+                // --------------------------------------------
+                // SCANLINES
+                // --------------------------------------------
+
+                color +=
+                    scanline(uv);
+
+                // --------------------------------------------
+                // BORDES RECONSTRUIDOS
+                // --------------------------------------------
+
+                float edge =
+                    edgeGlow(uv);
+
+                vec3 digitalEdge =
+                    vec3(
+                        0.05,
+                        0.75,
+                        1.0
+                    );
+
+                color =
+                    mix(
+                        color,
+                        color + digitalEdge * 0.30,
+                        edge * 0.35
+                    );
+
+                // --------------------------------------------
+                // PIXELES DIGITALES MUY SUTILES
+                // --------------------------------------------
+
+                vec2 grid =
+                    floor(
+                        uv * 180.0
+                    );
+
+                float randomPixel =
+                    hash(
+                        grid +
+                        floor(uTime * 2.0)
+                    );
+
+                float digitalNoise =
+                    step(
+                        0.996,
+                        randomPixel
+                    );
+
+                color +=
+                    digitalNoise *
+                    vec3(
+                        0.0,
+                        0.35,
+                        0.55
+                    );
+
+                // --------------------------------------------
+                // TRANSPARENCIA
+                // --------------------------------------------
+
+                float alpha =
+                    mask * photo.a;
+
+                gl_FragColor =
+                    vec4(
+                        color,
+                        alpha
+                    );
+            }
+        `
     });
 
+    // --------------------------------------------------
+    // PLANO DEL RETRATO
+    // --------------------------------------------------
 
-    // --------------------------------------------------------
-    // TORSO
-    // --------------------------------------------------------
-
-    const torsoGeometry =
-        new THREE.CapsuleGeometry(
-            0.72,
-            1.35,
-            32,
-            64
-        );
-
-    const torso =
-        new THREE.Mesh(
-            torsoGeometry,
-            bodyMaterial
-        );
-
-    torso.scale.set(
-        1.05,
-        1,
-        0.62
-    );
-
-    torso.position.y = -0.65;
-
-    avatar.add(torso);
-
-
-    // --------------------------------------------------------
-    // NECK
-    // --------------------------------------------------------
-
-    const neckGeometry =
-        new THREE.CylinderGeometry(
-            0.24,
-            0.29,
-            0.42,
-            32
-        );
-
-    const neck =
-        new THREE.Mesh(
-            neckGeometry,
-            bodyMaterial
-        );
-
-    neck.position.y = 0.38;
-
-    avatar.add(neck);
-
-
-    // ========================================================
-    // HEAD
-    // ========================================================
-
-    const headMaterial =
-        new THREE.MeshPhysicalMaterial({
-
-            color: 0xc88f78,
-
-            roughness: 0.52,
-
-            metalness: 0.02,
-
-            clearcoat: 0.3,
-
-            clearcoatRoughness: 0.3
-
-        });
-
-
-    const headGeometry =
-        new THREE.SphereGeometry(
-            0.61,
+    const geometry =
+        new THREE.PlaneGeometry(
+            3.15,
+            4.15,
             64,
             64
         );
 
-
-    const head =
+    const portrait =
         new THREE.Mesh(
-            headGeometry,
-            headMaterial
+            geometry,
+            material
         );
 
+    avatar.add(portrait);
 
-    head.scale.set(
-        0.91,
-        1.12,
-        0.86
-    );
-
-
-    head.position.y = 1.02;
-
-    avatar.add(head);
-
-
-    // ========================================================
-    // HAIR
-    // ========================================================
-
-    const hairMaterial =
-        new THREE.MeshPhysicalMaterial({
-
-            color: 0x241a18,
-
-            roughness: 0.78,
-
-            metalness: 0.02,
-
-            clearcoat: 0.15
-
-        });
-
-
-    const hairGeometry =
-        new THREE.SphereGeometry(
-            0.68,
-            48,
-            48,
-            0,
-            Math.PI * 2,
-            0,
-            Math.PI * 0.65
-        );
-
-
-    const hair =
-        new THREE.Mesh(
-            hairGeometry,
-            hairMaterial
-        );
-
-
-    hair.scale.set(
-        0.96,
-        1.12,
-        0.94
-    );
-
-
-    hair.position.y = 1.18;
-
-    avatar.add(hair);
-
-
-    // ========================================================
-    // EYES
-    // ========================================================
-
-    const eyeMaterial =
-        new THREE.MeshPhysicalMaterial({
-            color: 0x241914,
-            roughness: 0.15,
-            metalness: 0.1
-        });
-
-
-    function createEye(x) {
-
-        const geometry =
-            new THREE.SphereGeometry(
-                0.055,
-                24,
-                24
-            );
-
-        const eye =
-            new THREE.Mesh(
-                geometry,
-                eyeMaterial
-            );
-
-        eye.position.set(
-            x,
-            1.08,
-            0.52
-        );
-
-        return eye;
-    }
-
-
-    const leftEye =
-        createEye(-0.18);
-
-    const rightEye =
-        createEye(0.18);
-
-
-    avatar.add(leftEye);
-    avatar.add(rightEye);
-
-
-    // ========================================================
-    // NOSE
-    // ========================================================
-
-    const noseGeometry =
-        new THREE.ConeGeometry(
-            0.09,
-            0.25,
-            24
-        );
-
-
-    const nose =
-        new THREE.Mesh(
-            noseGeometry,
-            headMaterial
-        );
-
-
-    nose.rotation.x =
-        Math.PI / 2;
-
-
-    nose.position.set(
+    portrait.position.set(
         0,
-        0.96,
-        0.58
-    );
-
-
-    avatar.add(nose);
-
-
-    // ========================================================
-    // MOUTH
-    // ========================================================
-
-    const mouthGeometry =
-        new THREE.TorusGeometry(
-            0.13,
-            0.018,
-            12,
-            32,
-            Math.PI
-        );
-
-
-    const mouth =
-        new THREE.Mesh(
-            mouthGeometry,
-            new THREE.MeshPhysicalMaterial({
-                color: 0x7d3e42,
-                roughness: 0.4
-            })
-        );
-
-
-    mouth.rotation.x =
-        Math.PI;
-
-
-    mouth.position.set(
-        0,
-        0.82,
-        0.54
-    );
-
-
-    avatar.add(mouth);
-
-
-    // ========================================================
-    // SHOULDERS
-    // ========================================================
-
-    const shoulderGeometry =
-        new THREE.SphereGeometry(
-            0.42,
-            32,
-            32
-        );
-
-
-    const leftShoulder =
-        new THREE.Mesh(
-            shoulderGeometry,
-            bodyMaterial
-        );
-
-
-    leftShoulder.scale.set(
-        1.45,
-        0.75,
-        0.72
-    );
-
-
-    leftShoulder.position.set(
-        -0.62,
-        -0.32,
+        -0.05,
         0
     );
 
+    // --------------------------------------------------
+    // HALO DIGITAL
+    // --------------------------------------------------
 
-    const rightShoulder =
-        leftShoulder.clone();
-
-
-    rightShoulder.position.x =
-        0.62;
-
-
-    avatar.add(leftShoulder);
-    avatar.add(rightShoulder);
-
-
-    // ========================================================
-    // DIGITAL WIREFRAME
-    // ========================================================
-
-    const wireMaterial =
-        new THREE.LineBasicMaterial({
-
-            color: 0x5ce8ff,
+    const haloMaterial =
+        new THREE.ShaderMaterial({
 
             transparent: true,
+            depthWrite: false,
 
-            opacity: 0.20
+            uniforms: {
+                uTime: {
+                    value: 0
+                }
+            },
 
+            vertexShader: `
+
+                varying vec2 vUv;
+
+                void main() {
+
+                    vUv = uv;
+
+                    gl_Position =
+                        projectionMatrix *
+                        modelViewMatrix *
+                        vec4(
+                            position,
+                            1.0
+                        );
+                }
+
+            `,
+
+            fragmentShader: `
+
+                varying vec2 vUv;
+
+                uniform float uTime;
+
+                void main() {
+
+                    vec2 p =
+                        vUv - 0.5;
+
+                    float d =
+                        length(
+                            p *
+                            vec2(
+                                0.85,
+                                1.0
+                            )
+                        );
+
+                    float glow =
+                        1.0 -
+                        smoothstep(
+                            0.18,
+                            0.5,
+                            d
+                        );
+
+                    float pulse =
+                        0.85 +
+                        sin(
+                            uTime * 1.2
+                        ) * 0.08;
+
+                    vec3 color =
+                        vec3(
+                            0.0,
+                            0.65,
+                            1.0
+                        );
+
+                    gl_FragColor =
+                        vec4(
+                            color,
+                            glow *
+                            0.11 *
+                            pulse
+                        );
+                }
+
+            `
         });
 
-
-    const wireGroup =
-        new THREE.Group();
-
-
-    avatar.add(wireGroup);
-
-
-    function addWire(mesh) {
-
-        const wire =
-            new THREE.LineSegments(
-
-                new THREE.WireframeGeometry(
-                    mesh.geometry
-                ),
-
-                wireMaterial
-            );
-
-        wire.position.copy(
-            mesh.position
+    const halo =
+        new THREE.Mesh(
+            new THREE.PlaneGeometry(
+                3.8,
+                4.7
+            ),
+            haloMaterial
         );
 
-        wire.rotation.copy(
-            mesh.rotation
-        );
+    halo.position.z = -0.08;
 
-        wire.scale.copy(
-            mesh.scale
-        );
+    avatar.add(halo);
 
-        wireGroup.add(wire);
+    // --------------------------------------------------
+    // PARTÍCULAS DE RECONSTRUCCIÓN
+    // --------------------------------------------------
 
-    }
+    const particleCount = 1300;
 
-
-    addWire(head);
-    addWire(hair);
-    addWire(torso);
-
-
-    // ========================================================
-    // PARTICLE RECONSTRUCTION
-    // ========================================================
-
-    const particleCount = 4200;
-
-    const positions =
+    const particlePositions =
         new Float32Array(
             particleCount * 3
         );
 
-    const original =
+    const particleSizes =
         new Float32Array(
-            particleCount * 3
+            particleCount
         );
-
 
     for (
         let i = 0;
@@ -522,94 +496,154 @@ if (!canvas) {
         i++
     ) {
 
-        const i3 = i * 3;
-
         const angle =
             Math.random() *
             Math.PI *
             2;
 
-
         const radius =
-            Math.random();
-
-
-        const y =
-            Math.random() * 3.3 -
-            1.1;
-
-
-        const bodyWidth =
-            y > 0.25
-                ? 0.55
-                : 0.9;
-
+            1.2 +
+            Math.random() * 1.5;
 
         const x =
             Math.cos(angle) *
             radius *
-            bodyWidth;
+            0.72;
 
+        const y =
+            (
+                Math.random() * 3.8
+            ) - 1.8;
 
         const z =
-            Math.sin(angle) *
-            radius *
-            0.48;
+            (
+                Math.random() - 0.5
+            ) * 0.7;
 
+        particlePositions[
+            i * 3
+        ] = x;
 
-        positions[i3] =
-            x;
+        particlePositions[
+            i * 3 + 1
+        ] = y;
 
-        positions[i3 + 1] =
-            y;
+        particlePositions[
+            i * 3 + 2
+        ] = z;
 
-        positions[i3 + 2] =
-            z;
-
-
-        original[i3] =
-            x;
-
-        original[i3 + 1] =
-            y;
-
-        original[i3 + 2] =
-            z;
-
+        particleSizes[i] =
+            1.0 +
+            Math.random() * 2.5;
     }
-
 
     const particleGeometry =
         new THREE.BufferGeometry();
 
-
     particleGeometry.setAttribute(
         "position",
         new THREE.BufferAttribute(
-            positions,
+            particlePositions,
             3
         )
     );
 
+    particleGeometry.setAttribute(
+        "size",
+        new THREE.BufferAttribute(
+            particleSizes,
+            1
+        )
+    );
 
     const particleMaterial =
-        new THREE.PointsMaterial({
-
-            color: 0x70edff,
-
-            size: 0.018,
+        new THREE.ShaderMaterial({
 
             transparent: true,
+            depthWrite: false,
 
-            opacity: 0.62,
+            uniforms: {
+                uTime: {
+                    value: 0
+                }
+            },
 
-            blending:
-                THREE.AdditiveBlending,
+            vertexShader: `
 
-            depthWrite: false
+                attribute float size;
 
+                uniform float uTime;
+
+                void main() {
+
+                    vec3 p =
+                        position;
+
+                    p.x +=
+                        sin(
+                            uTime * 0.5 +
+                            position.y * 2.0
+                        ) * 0.018;
+
+                    p.y +=
+                        cos(
+                            uTime * 0.35 +
+                            position.x * 2.0
+                        ) * 0.012;
+
+                    vec4 mvPosition =
+                        modelViewMatrix *
+                        vec4(
+                            p,
+                            1.0
+                        );
+
+                    gl_PointSize =
+                        size *
+                        (70.0 / -mvPosition.z);
+
+                    gl_Position =
+                        projectionMatrix *
+                        mvPosition;
+                }
+
+            `,
+
+            fragmentShader: `
+
+                uniform float uTime;
+
+                void main() {
+
+                    vec2 p =
+                        gl_PointCoord -
+                        0.5;
+
+                    float d =
+                        length(p);
+
+                    if (d > 0.5)
+                        discard;
+
+                    float pulse =
+                        0.6 +
+                        sin(
+                            uTime * 2.0
+                        ) * 0.2;
+
+                    gl_FragColor =
+                        vec4(
+                            0.05,
+                            0.75,
+                            1.0,
+                            (1.0 - d * 2.0)
+                            * 0.45
+                            * pulse
+                        );
+                }
+
+            `
         });
-
 
     const particles =
         new THREE.Points(
@@ -617,275 +651,104 @@ if (!canvas) {
             particleMaterial
         );
 
-
-    particles.position.y =
-        -0.05;
-
+    particles.position.z = 0.15;
 
     avatar.add(particles);
 
+    // --------------------------------------------------
+    // LÍNEAS DE ESCANEO
+    // --------------------------------------------------
 
-    // ========================================================
-    // DIGITAL SCAN
-    // ========================================================
+    const scanGroup =
+        new THREE.Group();
 
-    const scanMaterial =
-        new THREE.MeshBasicMaterial({
-
-            color: 0x62eaff,
-
-            transparent: true,
-
-            opacity: 0.22,
-
-            side: THREE.DoubleSide,
-
-            blending:
-                THREE.AdditiveBlending
-
-        });
-
-
-    const scanGeometry =
-        new THREE.PlaneGeometry(
-            2.4,
-            0.025
-        );
-
-
-    const scanLine =
-        new THREE.Mesh(
-            scanGeometry,
-            scanMaterial
-        );
-
-
-    scanLine.position.z =
-        0.65;
-
-
-    avatar.add(scanLine);
-
-
-    // ========================================================
-    // DIGITAL HALO
-    // ========================================================
-
-    const haloGeometry =
-        new THREE.RingGeometry(
-            1.15,
-            1.19,
-            96
-        );
-
-
-    const haloMaterial =
-        new THREE.MeshBasicMaterial({
-
-            color: 0x46e5ff,
-
-            transparent: true,
-
-            opacity: 0.20,
-
-            side: THREE.DoubleSide,
-
-            blending:
-                THREE.AdditiveBlending
-
-        });
-
-
-    const halo =
-        new THREE.Mesh(
-            haloGeometry,
-            haloMaterial
-        );
-
-
-    halo.position.y =
-        0.75;
-
-
-    halo.rotation.x =
-        Math.PI / 2;
-
-
-    avatar.add(halo);
-
-
-    // ========================================================
-    // CODE PARTICLES
-    // ========================================================
-
-    const codeParticles = [];
-
-    const codeCharacters = [
-        "{ }",
-        "< />",
-        "AI",
-        "01",
-        "10",
-        "//",
-        "&&",
-        "=>"
-    ];
-
+    avatar.add(scanGroup);
 
     for (
         let i = 0;
-        i < 28;
+        i < 8;
         i++
     ) {
 
-        const canvasTexture =
-            createCodeTexture(
-                codeCharacters[
-                Math.floor(
-                    Math.random() *
-                    codeCharacters.length
-                )
-                ]
-            );
+        const lineGeometry =
+            new THREE.BufferGeometry();
 
+        const y =
+            -1.8 +
+            i * 0.5;
 
-        const material =
-            new THREE.SpriteMaterial({
+        const vertices =
+            new Float32Array([
+                -1.55, y, 0.22,
+                1.55, y, 0.22
+            ]);
 
-                map: canvasTexture,
+        lineGeometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(
+                vertices,
+                3
+            )
+        );
 
+        const lineMaterial =
+            new THREE.LineBasicMaterial({
+                color: 0x37dfff,
                 transparent: true,
-
-                opacity: 0.35,
-
-                depthWrite: false
-
+                opacity: 0.08
             });
 
-
-        const sprite =
-            new THREE.Sprite(
-                material
+        const line =
+            new THREE.Line(
+                lineGeometry,
+                lineMaterial
             );
 
-
-        sprite.scale.set(
-            0.20,
-            0.10,
-            1
-        );
-
-
-        sprite.position.set(
-
-            (Math.random() - 0.5) * 2.8,
-
-            Math.random() * 3.4 - 1.2,
-
-            (Math.random() - 0.5) * 1.2
-
-        );
-
-
-        sprite.userData.speed =
-            0.15 +
-            Math.random() * 0.35;
-
-
-        sprite.userData.baseX =
-            sprite.position.x;
-
-
-        sprite.userData.phase =
-            Math.random() * Math.PI * 2;
-
-
-        avatar.add(sprite);
-
-        codeParticles.push(sprite);
-
+        scanGroup.add(line);
     }
 
+    // --------------------------------------------------
+    // MOUSE / PARALLAX
+    // --------------------------------------------------
 
-    // ========================================================
-    // CODE TEXTURE
-    // ========================================================
+    const targetMouse =
+        new THREE.Vector2(0, 0);
 
-    function createCodeTexture(text) {
+    const currentMouse =
+        new THREE.Vector2(0, 0);
 
-        const c =
-            document.createElement("canvas");
+    window.addEventListener(
+        "mousemove",
+        (event) => {
 
-        c.width = 256;
-        c.height = 128;
+            const rect =
+                container.getBoundingClientRect();
 
-        const ctx =
-            c.getContext("2d");
+            targetMouse.x =
+                (
+                    event.clientX -
+                    rect.left
+                ) /
+                rect.width -
+                0.5;
 
-        ctx.clearRect(
-            0,
-            0,
-            c.width,
-            c.height
-        );
+            targetMouse.y =
+                (
+                    event.clientY -
+                    rect.top
+                ) /
+                rect.height -
+                0.5;
 
-
-        ctx.font =
-            "bold 42px monospace";
-
-
-        ctx.fillStyle =
-            "#73ecff";
-
-
-        ctx.textAlign =
-            "center";
-
-
-        ctx.textBaseline =
-            "middle";
-
-
-        ctx.fillText(
-            text,
-            c.width / 2,
-            c.height / 2
-        );
-
-
-        const texture =
-            new THREE.CanvasTexture(c);
-
-
-        texture.needsUpdate = true;
-
-        return texture;
-
-    }
-
-
-    // ========================================================
-    // POSITION
-    // ========================================================
-
-    avatar.position.y =
-        -0.35;
-
-
-    avatar.scale.set(
-        1.18,
-        1.18,
-        1.18
+        }
     );
 
-
-    // ========================================================
-    // ANIMATION
-    // ========================================================
+    // --------------------------------------------------
+    // ANIMACIÓN
+    // --------------------------------------------------
 
     const clock =
         new THREE.Clock();
-
 
     function animate() {
 
@@ -893,173 +756,61 @@ if (!canvas) {
             animate
         );
 
-
         const time =
             clock.getElapsedTime();
 
+        material.uniforms.uTime.value =
+            time;
 
-        // ------------------------------
-        // BREATHING
-        // ------------------------------
+        material.uniforms.uMouse.value =
+            currentMouse;
 
-        const breathing =
-            Math.sin(
-                time * 1.4
-            ) * 0.012;
+        haloMaterial.uniforms.uTime.value =
+            time;
 
+        particleMaterial.uniforms.uTime.value =
+            time;
 
-        torso.scale.y =
-            1 + breathing;
+        // Suavizado del movimiento
+        currentMouse.x +=
+            (
+                targetMouse.x -
+                currentMouse.x
+            ) * 0.035;
 
+        currentMouse.y +=
+            (
+                targetMouse.y -
+                currentMouse.y
+            ) * 0.035;
 
-        // ------------------------------
-        // HEAD MICRO MOVEMENT
-        // ------------------------------
-
-        head.rotation.y =
-            Math.sin(
-                time * 0.45
-            ) * 0.025;
-
-
-        head.rotation.x =
-            Math.sin(
-                time * 0.31
-            ) * 0.012;
-
-
-        // ------------------------------
-        // DIGITAL ROTATION
-        // ------------------------------
-
+        // Movimiento de "videollamada"
         avatar.rotation.y =
+            currentMouse.x * 0.035;
+
+        avatar.rotation.x =
+            -currentMouse.y * 0.018;
+
+        // Partículas flotando
+        particles.rotation.y =
             Math.sin(
-                time * 0.35
+                time * 0.18
             ) * 0.025;
 
-
-        // ------------------------------
-        // SCAN
-        // ------------------------------
-
-        scanLine.position.y =
+        particles.rotation.x =
             Math.sin(
-                time * 1.4
-            ) * 1.55;
-
-
-        // ------------------------------
-        // HALO
-        // ------------------------------
-
-        halo.rotation.z =
-            time * 0.08;
-
-
-        halo.material.opacity =
-            0.16 +
-            Math.sin(time * 2) *
-            0.06;
-
-
-        // ------------------------------
-        // PARTICLES
-        // ------------------------------
-
-        const positionAttribute =
-            particleGeometry.getAttribute(
-                "position"
-            );
-
-
-        for (
-            let i = 0;
-            i < particleCount;
-            i++
-        ) {
-
-            const i3 =
-                i * 3;
-
-
-            positionAttribute.array[
-                i3
-            ] =
-                original[i3] +
-                Math.sin(
-                    time * 0.8 + i
-                ) * 0.018;
-
-
-            positionAttribute.array[
-                i3 + 1
-            ] =
-                original[i3 + 1] +
-                Math.sin(
-                    time * 0.55 + i * 0.3
-                ) * 0.025;
-
-
-            positionAttribute.array[
-                i3 + 2
-            ] =
-                original[i3 + 2] +
-                Math.cos(
-                    time * 0.7 + i
-                ) * 0.018;
-
-        }
-
-
-        positionAttribute.needsUpdate =
-            true;
-
-
-        // ------------------------------
-        // CODE FLOATING
-        // ------------------------------
-
-        codeParticles.forEach(
-            sprite => {
-
-                sprite.position.y +=
-                    sprite.userData.speed *
-                    0.003;
-
-
-                sprite.position.x =
-                    sprite.userData.baseX +
-                    Math.sin(
-                        time +
-                        sprite.userData.phase
-                    ) * 0.05;
-
-
-                if (
-                    sprite.position.y >
-                    2.4
-                ) {
-
-                    sprite.position.y =
-                        -1.7;
-
-                }
-
-            }
-        );
-
+                time * 0.13
+            ) * 0.012;
 
         renderer.render(
             scene,
             camera
         );
-
     }
 
-
-    // ========================================================
-    // RESIZE
-    // ========================================================
+    // --------------------------------------------------
+    // RESPONSIVE
+    // --------------------------------------------------
 
     function resize() {
 
@@ -1069,7 +820,6 @@ if (!canvas) {
         const height =
             container.clientHeight;
 
-
         if (
             width <= 0 ||
             height <= 0
@@ -1077,13 +827,10 @@ if (!canvas) {
             return;
         }
 
-
         camera.aspect =
             width / height;
 
-
         camera.updateProjectionMatrix();
-
 
         renderer.setSize(
             width,
@@ -1091,22 +838,23 @@ if (!canvas) {
             false
         );
 
+        material.uniforms.uResolution.value
+            .set(
+                width,
+                height
+            );
     }
-
 
     window.addEventListener(
         "resize",
         resize
     );
 
-
     resize();
 
     animate();
 
-
     console.log(
-        "Shirt AI Digital Human iniciado."
+        "Shirt AI — Digital Human System iniciado."
     );
-
 }
