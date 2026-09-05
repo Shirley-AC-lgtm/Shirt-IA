@@ -166,6 +166,25 @@ if (!canvas) {
                 gltf.scene;
 
 
+            const textureLoader = new THREE.TextureLoader();
+
+            const shirtTexture = textureLoader.load(
+                "../textures/ShirtAI_Texture.png"
+            );
+
+            shirtTexture.flipY = false;
+
+            model.traverse(function (object) {
+
+                if (object.isMesh) {
+
+                    object.material.map = shirtTexture;
+                    object.material.needsUpdate = true;
+
+                }
+
+            });
+
             // ------------------------------------------------
             // Add model
             // ------------------------------------------------
@@ -181,7 +200,7 @@ if (!canvas) {
 
             model.position.set(
                 0,
-                -1.4,
+                0,
                 0
             );
 
