@@ -200,7 +200,7 @@ if (!canvas) {
 
             model.position.set(
                 0,
-                0,
+                1,
                 0
             );
 
