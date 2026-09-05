@@ -463,11 +463,16 @@ textarea {
 .avatar-section {
     position: relative;
     width: 100%;
-    height: 420px;
+    height: 390px;
     overflow: hidden;
-    background: radial-gradient( circle at center, #151a22 0%, #090b10 45%, #050608 100% );
+    background: radial-gradient( circle at 50% 45%, rgba(120, 90, 255, 0.18), transparent 35% ), radial-gradient( circle at 50% 75%, rgba(0, 229, 255, 0.08), transparent 50% ), #08090d;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+
+/* =========================================
+   3D CANVAS
+   ========================================= */
 
 #avatarCanvas {
     display: block;
@@ -475,20 +480,26 @@ textarea {
     height: 100%;
 }
 
+
+/* =========================================
+   AVATAR STATUS
+   ========================================= */
+
 .avatar-overlay {
     position: absolute;
-    top: 20px;
-    left: 25px;
+    top: 22px;
+    left: 28px;
+    z-index: 5;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
     pointer-events: none;
 }
 
 .avatar-status {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     color: rgba(255, 255, 255, 0.9);
 }
 
@@ -498,10 +509,28 @@ textarea {
     color: #63ffb0;
 }
 
+
+/* =========================================
+   MOBILE
+   ========================================= */
+
 @media (max-width: 700px) {
 
     .avatar-section {
         height: 300px;
     }
-}
 
+    .avatar-overlay {
+        top: 18px;
+        left: 18px;
+    }
+
+    .avatar-status {
+        font-size: 10px;
+        letter-spacing: 3px;
+    }
+
+    .avatar-state {
+        font-size: 9px;
+    }
+}
