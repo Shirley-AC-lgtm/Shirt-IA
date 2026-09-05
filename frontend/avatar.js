@@ -154,7 +154,7 @@ if (!canvas) {
 
     loader.load(
 
-        "models/ShirtAI.glb",
+        "../models/ShirtAI.glb",
 
         function (gltf) {
 
