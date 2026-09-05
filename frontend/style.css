@@ -534,3 +534,30 @@ textarea {
         font-size: 9px;
     }
 }
+
+.avatar-section {
+    flex-shrink: 0;
+    z-index: 1;
+}
+
+/* El canvas debe estar por encima del fondo */
+#avatarCanvas {
+    position: relative;
+    z-index: 2;
+}
+
+/* Información del avatar por encima del canvas */
+.avatar-overlay {
+    z-index: 3;
+}
+.chat-header {
+    height: 70px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #292929;
+    display: flex;
+    align-items: center;
+    padding: 0 30px;
+    position: relative;
+    z-index: 10;
+    background: #111111;
+}
